@@ -195,3 +195,78 @@ resource "nutanix_storage_policy_v2" "storage_policy" {
     }
   }
 }
+
+##################################################
+# Volume Group iSCSI Clients
+##################################################
+
+resource "nutanix_volume_group_iscsi_client_v2" "iscsi_client" {
+  for_each = var.volume_group_iscsi_clients
+
+  # Resolve the VG reference against module-created VGs first; otherwise treat it
+  # as an ext_id passthrough for a pre-existing volume group.
+  vg_ext_id = contains(keys(var.volume_groups), each.value.volume_group) ? nutanix_volume_group_v2.volume_group[each.value.volume_group].ext_id : each.value.volume_group
+
+  iscsi_initiator_name    = each.value.iscsi_initiator_name
+  enabled_authentications = each.value.enabled_authentications
+  attachment_site         = each.value.attachment_site
+  num_virtual_targets     = each.value.num_virtual_targets
+
+  # CHAP secret is sourced only from the sensitive secrets map, never from YAML.
+  client_secret = try(var.volume_group_iscsi_client_secrets[each.key], null)
+
+  dynamic "iscsi_initiator_network_id" {
+    for_each = each.value.iscsi_initiator_network_id != null ? [each.value.iscsi_initiator_network_id] : []
+    content {
+      dynamic "ipv4" {
+        for_each = iscsi_initiator_network_id.value.ipv4 != null ? [iscsi_initiator_network_id.value.ipv4] : []
+        content {
+          value         = ipv4.value.value
+          prefix_length = ipv4.value.prefix_length
+        }
+      }
+      dynamic "ipv6" {
+        for_each = iscsi_initiator_network_id.value.ipv6 != null ? [iscsi_initiator_network_id.value.ipv6] : []
+        content {
+          value         = ipv6.value.value
+          prefix_length = ipv6.value.prefix_length
+        }
+      }
+      dynamic "fqdn" {
+        for_each = iscsi_initiator_network_id.value.fqdn != null ? [iscsi_initiator_network_id.value.fqdn] : []
+        content {
+          value = fqdn.value.value
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      client_secret,
+    ]
+  }
+}
+
+##################################################
+# Volume Group Category Associations
+##################################################
+
+resource "nutanix_associate_category_to_volume_group_v2" "category_association" {
+  for_each = var.volume_group_category_associations
+
+  # Resolve the VG reference against module-created VGs first; otherwise treat it
+  # as an ext_id passthrough for a pre-existing volume group.
+  ext_id = contains(keys(var.volume_groups), each.value.volume_group) ? nutanix_volume_group_v2.volume_group[each.value.volume_group].ext_id : each.value.volume_group
+
+  dynamic "categories" {
+    for_each = each.value.categories
+    content {
+      # Use the explicit ext_id when given; otherwise resolve the "key/value"
+      # name via the gated categories_v2 lookup.
+      ext_id      = categories.value.ext_id != null ? categories.value.ext_id : try(local.category_ext_id_by_name[categories.value.name], null)
+      entity_type = categories.value.entity_type
+      uris        = length(categories.value.uris) > 0 ? categories.value.uris : null
+    }
+  }
+}

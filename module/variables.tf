@@ -271,6 +271,120 @@ variable "storage_policies" {
 }
 
 ##################################################
+# Volume Group iSCSI Clients
+##################################################
+
+variable "volume_group_iscsi_clients" {
+  description = "A map of external iSCSI initiator clients to attach to volume groups. Each entry references a volume group by 'volume_group' (a key of var.volume_groups for a module-created VG, or a raw VG ext_id for a pre-existing one) and identifies the initiator by IQN ('iscsi_initiator_name') or network address ('iscsi_initiator_network_id'). CHAP secrets are NOT set here — supply them via the sensitive 'volume_group_iscsi_client_secrets' map."
+  type = map(object({
+    volume_group            = string                   # key of var.volume_groups, or a VG ext_id
+    iscsi_initiator_name    = optional(string, null)   # iSCSI initiator IQN (immutable)
+    enabled_authentications = optional(string, "NONE") # NONE or CHAP
+    attachment_site         = optional(string, null)   # only valid when Metro DR is configured
+    num_virtual_targets     = optional(number, null)   # immutable
+
+    iscsi_initiator_network_id = optional(object({
+      ipv4 = optional(object({
+        value         = string
+        prefix_length = optional(number, 32)
+      }), null)
+      ipv6 = optional(object({
+        value         = string
+        prefix_length = optional(number, 128)
+      }), null)
+      fqdn = optional(object({
+        value = string
+      }), null)
+    }), null)
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_iscsi_clients :
+      v.volume_group != null && v.volume_group != ""
+    ])
+    error_message = "Each iSCSI client must reference a non-empty 'volume_group' (a var.volume_groups key or a VG ext_id)."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_iscsi_clients :
+      (v.iscsi_initiator_name != null && v.iscsi_initiator_name != "") != (v.iscsi_initiator_network_id != null)
+    ])
+    error_message = "Each iSCSI client must set exactly one of 'iscsi_initiator_name' or 'iscsi_initiator_network_id'."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_iscsi_clients :
+      v.iscsi_initiator_name == null ? true : can(regex("^(iqn|eui)\\.", v.iscsi_initiator_name))
+    ])
+    error_message = "iSCSI 'iscsi_initiator_name' must be a valid IQN (starts with 'iqn.') or EUI ('eui.')."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_iscsi_clients :
+      contains(["NONE", "CHAP"], v.enabled_authentications)
+    ])
+    error_message = "iSCSI 'enabled_authentications' must be one of: NONE, CHAP."
+  }
+}
+
+variable "volume_group_iscsi_client_secrets" {
+  description = "Map of iSCSI client key => CHAP client secret. Isolated from the plaintext 'volume_group_iscsi_clients' map so that authentication secrets never enter YAML config. Only consulted for clients whose 'enabled_authentications' is CHAP."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
+##################################################
+# Volume Group Category Associations
+##################################################
+
+variable "volume_group_category_associations" {
+  description = "A map of volume-group category associations. Each entry references a volume group by 'volume_group' (a key of var.volume_groups, or a raw VG ext_id) and a list of categories. A category is referenced directly by 'ext_id', or by 'name' in \"key/value\" form which is resolved to an ext_id via the gated categories_v2 lookup (requires enable_data_lookups = true)."
+  type = map(object({
+    volume_group = string # key of var.volume_groups, or a VG ext_id
+    categories = list(object({
+      ext_id      = optional(string, null)       # category ext_id (passthrough)
+      name        = optional(string, null)       # "key/value" resolved via categories_v2 lookup when ext_id omitted
+      entity_type = optional(string, "CATEGORY") # entity type of the category reference
+      uris        = optional(list(string), [])
+    }))
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_category_associations :
+      v.volume_group != null && v.volume_group != ""
+    ])
+    error_message = "Each category association must reference a non-empty 'volume_group' (a var.volume_groups key or a VG ext_id)."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_category_associations :
+      length(v.categories) > 0
+    ])
+    error_message = "Each category association must reference at least one category."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_category_associations :
+      alltrue([
+        for c in v.categories :
+        (c.ext_id != null && c.ext_id != "") || (c.name != null && c.name != "")
+      ])
+    ])
+    error_message = "Each category reference must supply either 'ext_id' or 'name'."
+  }
+}
+
+##################################################
 # Data Lookups
 ##################################################
 

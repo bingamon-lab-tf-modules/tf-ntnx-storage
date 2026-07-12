@@ -51,4 +51,20 @@ locals {
   throttled_policies = {
     for k, v in var.storage_policies : k => v if v.qos_spec != null
   }
+
+  ##################################################
+  # Volume Group iSCSI Clients / Category Associations
+  ##################################################
+
+  # iSCSI clients configured for CHAP authentication
+  chap_iscsi_clients = {
+    for k, v in var.volume_group_iscsi_clients : k => v if v.enabled_authentications == "CHAP"
+  }
+
+  # Resolve a category "name" ("key/value" form) to its ext_id via the gated
+  # categories_v2 lookup. Empty when data lookups are disabled.
+  category_ext_id_by_name = var.enable_data_lookups ? {
+    for c in try(data.nutanix_categories_v2.existing_categories[0].categories, []) :
+    "${c.key}/${c.value}" => c.ext_id
+  } : {}
 }

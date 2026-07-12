@@ -104,22 +104,61 @@ output "storage_policy_ids" {
 }
 
 ##################################################
+# Volume Group iSCSI Client Outputs
+##################################################
+
+output "volume_group_iscsi_clients" {
+  description = "Map of volume group iSCSI clients with their details (no secrets)."
+  value = {
+    for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => {
+      ext_id                  = v.ext_id
+      vg_ext_id               = v.vg_ext_id
+      iscsi_initiator_name    = v.iscsi_initiator_name
+      enabled_authentications = v.enabled_authentications
+      num_virtual_targets     = v.num_virtual_targets
+    }
+  }
+}
+
+output "volume_group_iscsi_client_ids" {
+  description = "Map of volume group iSCSI client keys to their external IDs."
+  value       = { for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => v.ext_id }
+}
+
+##################################################
+# Volume Group Category Association Outputs
+##################################################
+
+output "volume_group_category_associations" {
+  description = "Map of volume group category associations with their resolved VG ext_id and categories."
+  value = {
+    for k, v in nutanix_associate_category_to_volume_group_v2.category_association : k => {
+      vg_ext_id  = v.ext_id
+      categories = v.categories
+    }
+  }
+}
+
+##################################################
 # Summary
 ##################################################
 
 output "storage_summary" {
   description = "Summary of storage resources managed by this module."
   value = {
-    total_storage_containers = length(var.storage_containers)
-    total_volume_groups      = length(var.volume_groups)
-    total_volume_group_disks = length(var.volume_group_disks)
-    total_storage_policies   = length(var.storage_policies)
-    compressed_containers    = length(local.compressed_containers)
-    ec_containers            = length(local.ec_containers)
-    encrypted_containers     = length(local.encrypted_containers)
-    shared_volume_groups     = length(local.shared_volume_groups)
-    compression_policies     = length(local.compression_policies)
-    encrypted_policies       = length(local.encrypted_policies)
-    throttled_policies       = length(local.throttled_policies)
+    total_storage_containers                 = length(var.storage_containers)
+    total_volume_groups                      = length(var.volume_groups)
+    total_volume_group_disks                 = length(var.volume_group_disks)
+    total_storage_policies                   = length(var.storage_policies)
+    total_volume_group_iscsi_clients         = length(var.volume_group_iscsi_clients)
+    total_volume_group_category_associations = length(var.volume_group_category_associations)
+    compressed_containers                    = length(local.compressed_containers)
+    ec_containers                            = length(local.ec_containers)
+    encrypted_containers                     = length(local.encrypted_containers)
+    shared_volume_groups                     = length(local.shared_volume_groups)
+    compression_policies                     = length(local.compression_policies)
+    encrypted_policies                       = length(local.encrypted_policies)
+    throttled_policies                       = length(local.throttled_policies)
+    chap_iscsi_clients                       = length(local.chap_iscsi_clients)
   }
 }
