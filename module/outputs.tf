@@ -145,20 +145,81 @@ output "volume_group_category_associations" {
 
 output "storage_summary" {
   description = "Summary of storage resources managed by this module."
+  value       = local.out_storage_summary
+}
+
+##################################################
+# Aggregate output (spec §7.6 contract)
+##################################################
+
+output "outputs" {
+  description = "Aggregate of all module outputs (spec §7.6 contract, consumed by the landing zone as module.<x>.outputs)."
   value = {
-    total_storage_containers                 = length(var.storage_containers)
-    total_volume_groups                      = length(var.volume_groups)
-    total_volume_group_disks                 = length(var.volume_group_disks)
-    total_storage_policies                   = length(var.storage_policies)
-    total_volume_group_iscsi_clients         = length(var.volume_group_iscsi_clients)
-    total_volume_group_category_associations = length(var.volume_group_category_associations)
-    compressed_containers                    = length(local.compressed_containers)
-    ec_containers                            = length(local.ec_containers)
-    encrypted_containers                     = length(local.encrypted_containers)
-    shared_volume_groups                     = length(local.shared_volume_groups)
-    compression_policies                     = length(local.compression_policies)
-    encrypted_policies                       = length(local.encrypted_policies)
-    throttled_policies                       = length(local.throttled_policies)
-    chap_iscsi_clients                       = length(local.chap_iscsi_clients)
+    storage_containers = {
+      for k, v in nutanix_storage_containers_v2.container : k => {
+        ext_id                         = v.ext_id
+        name                           = v.name
+        cluster_ext_id                 = v.cluster_ext_id
+        replication_factor             = v.replication_factor
+        erasure_code                   = v.erasure_code
+        is_compression_enabled         = v.is_compression_enabled
+        is_software_encryption_enabled = v.is_software_encryption_enabled
+      }
+    }
+    storage_container_ids = { for k, v in nutanix_storage_containers_v2.container : k => v.ext_id }
+    volume_groups = {
+      for k, v in nutanix_volume_group_v2.volume_group : k => {
+        ext_id            = v.ext_id
+        name              = v.name
+        cluster_reference = v.cluster_reference
+        sharing_status    = v.sharing_status
+        usage_type        = v.usage_type
+        target_name       = v.target_name
+      }
+    }
+    volume_group_ids = { for k, v in nutanix_volume_group_v2.volume_group : k => v.ext_id }
+    volume_group_disks = {
+      for k, v in nutanix_volume_group_disk_v2.disk : k => {
+        ext_id              = v.ext_id
+        volume_group_ext_id = v.volume_group_ext_id
+        index               = v.index
+        disk_size_bytes     = v.disk_size_bytes
+        description         = v.description
+      }
+    }
+    volume_group_disk_ids = { for k, v in nutanix_volume_group_disk_v2.disk : k => v.ext_id }
+    volume_group_vm_attachments = {
+      for k, v in nutanix_volume_group_vm_v2.vm_attachment : k => {
+        volume_group_ext_id = v.volume_group_ext_id
+        vm_ext_id           = v.vm_ext_id
+        index               = v.index
+      }
+    }
+    storage_policies = {
+      for k, v in nutanix_storage_policy_v2.storage_policy : k => {
+        ext_id           = v.ext_id
+        name             = v.name
+        policy_type      = v.policy_type
+        category_ext_ids = v.category_ext_ids
+      }
+    }
+    storage_policy_ids = { for k, v in nutanix_storage_policy_v2.storage_policy : k => v.ext_id }
+    volume_group_iscsi_clients = {
+      for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => {
+        ext_id                  = v.ext_id
+        vg_ext_id               = v.vg_ext_id
+        iscsi_initiator_name    = v.iscsi_initiator_name
+        enabled_authentications = v.enabled_authentications
+        num_virtual_targets     = v.num_virtual_targets
+      }
+    }
+    volume_group_iscsi_client_ids = { for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => v.ext_id }
+    volume_group_category_associations = {
+      for k, v in nutanix_associate_category_to_volume_group_v2.category_association : k => {
+        vg_ext_id  = v.ext_id
+        categories = v.categories
+      }
+    }
+    storage_summary = local.out_storage_summary
   }
 }

@@ -59,6 +59,7 @@ No modules.
 
 | Name | Description |
 |------|-------------|
+| <a name="output_outputs"></a> [outputs](#output\_outputs) | Aggregate of all module outputs (spec §7.6 contract, consumed by the landing zone as module.<x>.outputs). |
 | <a name="output_storage_container_ids"></a> [storage\_container\_ids](#output\_storage\_container\_ids) | Map of storage container keys to their external IDs. |
 | <a name="output_storage_containers"></a> [storage\_containers](#output\_storage\_containers) | Map of created storage containers with their details. |
 | <a name="output_storage_policies"></a> [storage\_policies](#output\_storage\_policies) | Map of created storage policies with their details. |
