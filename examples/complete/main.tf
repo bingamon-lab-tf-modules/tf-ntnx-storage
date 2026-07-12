@@ -107,4 +107,28 @@ module "storage" {
       }
     }
   }
+
+  # Storage Policies (category-driven QoS: compression, encryption, throttling)
+  storage_policies = {
+    gold = {
+      name             = "gold"
+      category_ext_ids = [var.category_ext_id]
+
+      compression_spec = {
+        compression_state = "INLINE"
+      }
+
+      encryption_spec = {
+        encryption_state = "ENABLED"
+      }
+
+      qos_spec = {
+        throttled_iops = 5000
+      }
+
+      fault_tolerance_spec = {
+        replication_factor = "THREE"
+      }
+    }
+  }
 }

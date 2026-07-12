@@ -83,6 +83,27 @@ output "volume_group_vm_attachments" {
 }
 
 ##################################################
+# Storage Policy Outputs
+##################################################
+
+output "storage_policies" {
+  description = "Map of created storage policies with their details."
+  value = {
+    for k, v in nutanix_storage_policy_v2.storage_policy : k => {
+      ext_id           = v.ext_id
+      name             = v.name
+      policy_type      = v.policy_type
+      category_ext_ids = v.category_ext_ids
+    }
+  }
+}
+
+output "storage_policy_ids" {
+  description = "Map of storage policy keys to their external IDs."
+  value       = { for k, v in nutanix_storage_policy_v2.storage_policy : k => v.ext_id }
+}
+
+##################################################
 # Summary
 ##################################################
 
@@ -92,9 +113,13 @@ output "storage_summary" {
     total_storage_containers = length(var.storage_containers)
     total_volume_groups      = length(var.volume_groups)
     total_volume_group_disks = length(var.volume_group_disks)
+    total_storage_policies   = length(var.storage_policies)
     compressed_containers    = length(local.compressed_containers)
     ec_containers            = length(local.ec_containers)
     encrypted_containers     = length(local.encrypted_containers)
     shared_volume_groups     = length(local.shared_volume_groups)
+    compression_policies     = length(local.compression_policies)
+    encrypted_policies       = length(local.encrypted_policies)
+    throttled_policies       = length(local.throttled_policies)
   }
 }

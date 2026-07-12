@@ -156,3 +156,42 @@ resource "nutanix_volume_group_vm_v2" "vm_attachment" {
   vm_ext_id           = each.value.vm_ext_id
   index               = each.value.index
 }
+
+##################################################
+# Storage Policies
+##################################################
+
+resource "nutanix_storage_policy_v2" "storage_policy" {
+  for_each = var.storage_policies
+
+  name             = each.value.name
+  category_ext_ids = each.value.category_ext_ids
+
+  dynamic "compression_spec" {
+    for_each = each.value.compression_spec != null ? [each.value.compression_spec] : []
+    content {
+      compression_state = compression_spec.value.compression_state
+    }
+  }
+
+  dynamic "encryption_spec" {
+    for_each = each.value.encryption_spec != null ? [each.value.encryption_spec] : []
+    content {
+      encryption_state = encryption_spec.value.encryption_state
+    }
+  }
+
+  dynamic "qos_spec" {
+    for_each = each.value.qos_spec != null ? [each.value.qos_spec] : []
+    content {
+      throttled_iops = qos_spec.value.throttled_iops
+    }
+  }
+
+  dynamic "fault_tolerance_spec" {
+    for_each = each.value.fault_tolerance_spec != null ? [each.value.fault_tolerance_spec] : []
+    content {
+      replication_factor = fault_tolerance_spec.value.replication_factor
+    }
+  }
+}

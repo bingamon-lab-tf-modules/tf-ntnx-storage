@@ -32,4 +32,23 @@ locals {
   iscsi_volume_groups = {
     for k, v in var.volume_groups : k => v if v.iscsi_features != null
   }
+
+  ##################################################
+  # Storage Policies
+  ##################################################
+
+  # Policies that apply a compression effect
+  compression_policies = {
+    for k, v in var.storage_policies : k => v if v.compression_spec != null
+  }
+
+  # Policies that apply an encryption effect
+  encrypted_policies = {
+    for k, v in var.storage_policies : k => v if v.encryption_spec != null
+  }
+
+  # Policies that apply an IOPS-throttling (QoS) effect
+  throttled_policies = {
+    for k, v in var.storage_policies : k => v if v.qos_spec != null
+  }
 }

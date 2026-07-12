@@ -188,3 +188,94 @@ variable "volume_group_disks" {
     error_message = "Volume group disk 'index' must be a non-negative integer."
   }
 }
+
+##################################################
+# Storage Policies
+##################################################
+
+variable "storage_policies" {
+  description = "A map of storage policies (nutanix_storage_policy_v2) to manage in Nutanix. Each policy applies compression, encryption, fault-tolerance and/or IOPS-throttling effects to the entities selected by its referenced categories."
+  type = map(object({
+    name             = string
+    category_ext_ids = optional(set(string), [])
+
+    compression_spec = optional(object({
+      compression_state = string # DISABLED, POSTPROCESS, INLINE, SYSTEM_DERIVED
+    }), null)
+
+    encryption_spec = optional(object({
+      encryption_state = string # SYSTEM_DERIVED, ENABLED
+    }), null)
+
+    qos_spec = optional(object({
+      throttled_iops = number # 100 - 2147483647
+    }), null)
+
+    fault_tolerance_spec = optional(object({
+      replication_factor = string # SYSTEM_DERIVED, TWO, THREE
+    }), null)
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for k, v in var.storage_policies :
+      v.name != null && v.name != "" && length(v.name) <= 64
+    ])
+    error_message = "Storage policy 'name' is required and must not exceed 64 characters."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.storage_policies :
+      length(v.category_ext_ids) <= 20
+    ])
+    error_message = "Storage policy 'category_ext_ids' must reference at most 20 categories."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.storage_policies :
+      v.compression_spec == null ? true :
+      contains(["DISABLED", "POSTPROCESS", "INLINE", "SYSTEM_DERIVED"], v.compression_spec.compression_state)
+    ])
+    error_message = "Storage policy 'compression_state' must be one of: DISABLED, POSTPROCESS, INLINE, SYSTEM_DERIVED."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.storage_policies :
+      v.encryption_spec == null ? true :
+      contains(["SYSTEM_DERIVED", "ENABLED"], v.encryption_spec.encryption_state)
+    ])
+    error_message = "Storage policy 'encryption_state' must be one of: SYSTEM_DERIVED, ENABLED."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.storage_policies :
+      v.fault_tolerance_spec == null ? true :
+      contains(["SYSTEM_DERIVED", "TWO", "THREE"], v.fault_tolerance_spec.replication_factor)
+    ])
+    error_message = "Storage policy 'replication_factor' must be one of: SYSTEM_DERIVED, TWO, THREE."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.storage_policies :
+      v.qos_spec == null ? true :
+      v.qos_spec.throttled_iops >= 100 && v.qos_spec.throttled_iops <= 2147483647
+    ])
+    error_message = "Storage policy 'throttled_iops' must be between 100 and 2147483647."
+  }
+}
+
+##################################################
+# Data Lookups
+##################################################
+
+variable "enable_data_lookups" {
+  description = "When true, enable the gated read-only data source lookups (e.g. existing storage policies). Off by default so plans do not require live Prism Central connectivity."
+  type        = bool
+  default     = false
+}

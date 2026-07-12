@@ -48,3 +48,17 @@ output "volume_group_vm_attachments" {
   description = "Map of volume group VM attachments"
   value       = module.storage.volume_group_vm_attachments
 }
+
+##################################################
+# Storage Policy Outputs
+##################################################
+
+output "storage_policies" {
+  description = "Map of created storage policies"
+  value       = module.storage.storage_policies
+}
+
+output "storage_policy_ids" {
+  description = "Map of storage policy keys to their IDs"
+  value       = module.storage.storage_policy_ids
+}

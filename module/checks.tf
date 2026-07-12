@@ -30,3 +30,15 @@ check "iscsi_chap_has_secret" {
     error_message = "Volume groups with CHAP authentication should have a 'target_secret' specified."
   }
 }
+
+# Validate that each storage policy defines at least one effect and one category.
+check "storage_policies_have_effect_and_category" {
+  assert {
+    condition = alltrue([
+      for k, v in var.storage_policies :
+      (v.compression_spec != null || v.encryption_spec != null || v.qos_spec != null || v.fault_tolerance_spec != null) &&
+      length(v.category_ext_ids) > 0
+    ])
+    error_message = "Each storage policy must define at least one effect (compression, encryption, qos, or fault_tolerance) and reference at least one category."
+  }
+}

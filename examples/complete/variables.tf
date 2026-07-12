@@ -47,3 +47,8 @@ variable "vm_ext_id" {
   description = "Existing VM external ID to attach volume groups to"
   type        = string
 }
+
+variable "category_ext_id" {
+  description = "Existing category external ID that storage policies target"
+  type        = string
+}
