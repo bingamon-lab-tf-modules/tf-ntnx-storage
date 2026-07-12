@@ -93,11 +93,23 @@ resource "nutanix_volume_group_disk_v2" "disk" {
   description         = each.value.description
   disk_size_bytes     = each.value.disk_size_bytes
 
+  # When no explicit disk_data_source_reference is given, derive it from
+  # disk_data_source (recovery point / VM disk) or storage_container_ext_id.
   disk_data_source_reference {
-    ext_id      = each.value.disk_data_source_reference.ext_id
-    name        = each.value.disk_data_source_reference.name
-    entity_type = each.value.disk_data_source_reference.entity_type
-    uris        = length(each.value.disk_data_source_reference.uris) > 0 ? each.value.disk_data_source_reference.uris : null
+    ext_id = each.value.disk_data_source_reference != null ? each.value.disk_data_source_reference.ext_id : (
+      try(each.value.disk_data_source.recovery_point_ext_id, null) != null ? each.value.disk_data_source.recovery_point_ext_id : (
+        try(each.value.disk_data_source.vm_disk_ext_id, null) != null ? each.value.disk_data_source.vm_disk_ext_id : each.value.storage_container_ext_id
+      )
+    )
+    name = each.value.disk_data_source_reference != null ? each.value.disk_data_source_reference.name : null
+    entity_type = each.value.disk_data_source_reference != null ? each.value.disk_data_source_reference.entity_type : (
+      try(each.value.disk_data_source.recovery_point_ext_id, null) != null ? "DISK_RECOVERY_POINT" : (
+        try(each.value.disk_data_source.vm_disk_ext_id, null) != null ? "VM_DISK" : "STORAGE_CONTAINER"
+      )
+    )
+    uris = each.value.disk_data_source_reference != null ? (
+      length(each.value.disk_data_source_reference.uris) > 0 ? each.value.disk_data_source_reference.uris : null
+    ) : null
   }
 
   dynamic "disk_storage_features" {
@@ -117,4 +129,30 @@ resource "nutanix_volume_group_disk_v2" "disk" {
       disk_data_source_reference,
     ]
   }
+}
+
+##################################################
+# Volume Group VM Attachments
+##################################################
+
+locals {
+  # Flatten volume group VM attachments for iteration.
+  volume_group_vm_attachments = flatten([
+    for vg_key, vg in var.volume_groups : [
+      for idx, attachment in vg.vm_attachments : {
+        key              = "${vg_key}-vm-${idx}"
+        volume_group_key = vg_key
+        vm_ext_id        = attachment.vm_ext_id
+        index            = attachment.index
+      }
+    ]
+  ])
+}
+
+resource "nutanix_volume_group_vm_v2" "vm_attachment" {
+  for_each = { for attachment in local.volume_group_vm_attachments : attachment.key => attachment }
+
+  volume_group_ext_id = nutanix_volume_group_v2.volume_group[each.value.volume_group_key].ext_id
+  vm_ext_id           = each.value.vm_ext_id
+  index               = each.value.index
 }

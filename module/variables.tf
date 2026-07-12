@@ -84,6 +84,11 @@ variable "volume_groups" {
         is_enabled = optional(bool, false)
       }), null)
     }), null)
+
+    vm_attachments = optional(list(object({
+      vm_ext_id = string           # VM UUID
+      index     = optional(number) # SCSI bus index
+    })), [])
   }))
   default = {}
 
@@ -111,17 +116,25 @@ variable "volume_groups" {
 variable "volume_group_disks" {
   description = "A map of volume group disks to manage in Nutanix."
   type = map(object({
-    volume_group_ext_id = string
-    index               = optional(number, null)
-    description         = optional(string, null)
-    disk_size_bytes     = number
+    volume_group_ext_id      = string
+    index                    = optional(number, null)
+    description              = optional(string, null)
+    disk_size_bytes          = number
+    storage_container_ext_id = optional(string, null) # Storage container UUID for a new disk (derivation fallback)
 
-    disk_data_source_reference = object({
+    disk_data_source = optional(object({
+      recovery_point_ext_id = optional(string, null) # Clone from recovery point
+      vm_disk_ext_id        = optional(string, null) # Clone from VM disk
+    }), null)
+
+    # Explicit data source reference; when omitted, the reference is derived
+    # from disk_data_source (recovery point / VM disk) or storage_container_ext_id.
+    disk_data_source_reference = optional(object({
       ext_id      = string
       name        = optional(string, null)
       entity_type = string # STORAGE_CONTAINER, VM_DISK, VOLUME_DISK, DISK_RECOVERY_POINT
       uris        = optional(list(string), [])
-    })
+    }), null)
 
     disk_storage_features = optional(object({
       flash_mode = optional(object({
@@ -134,8 +147,44 @@ variable "volume_group_disks" {
   validation {
     condition = alltrue([
       for k, v in var.volume_group_disks :
+      v.disk_data_source_reference == null ? true :
       contains(["STORAGE_CONTAINER", "VM_DISK", "VOLUME_DISK", "DISK_RECOVERY_POINT"], v.disk_data_source_reference.entity_type)
     ])
     error_message = "Volume group disk 'entity_type' must be one of: STORAGE_CONTAINER, VM_DISK, VOLUME_DISK, DISK_RECOVERY_POINT."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_disks :
+      v.volume_group_ext_id != null && v.volume_group_ext_id != ""
+    ])
+    error_message = "Volume group disk 'volume_group_ext_id' is required for all volume group disks."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_disks :
+      v.disk_data_source_reference != null ||
+      try(v.disk_data_source.recovery_point_ext_id, null) != null ||
+      try(v.disk_data_source.vm_disk_ext_id, null) != null ||
+      (v.storage_container_ext_id != null && v.storage_container_ext_id != "")
+    ])
+    error_message = "Volume group disks require a data source: set 'disk_data_source_reference', 'disk_data_source', or 'storage_container_ext_id'."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_disks :
+      v.disk_size_bytes >= 1073741824
+    ])
+    error_message = "Volume group disk 'disk_size_bytes' must be at least 1GB (1073741824 bytes)."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.volume_group_disks :
+      v.index == null ? true : v.index >= 0
+    ])
+    error_message = "Volume group disk 'index' must be a non-negative integer."
   }
 }

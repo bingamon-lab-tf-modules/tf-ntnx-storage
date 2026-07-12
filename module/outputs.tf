@@ -57,6 +57,7 @@ output "volume_group_disks" {
       volume_group_ext_id = v.volume_group_ext_id
       index               = v.index
       disk_size_bytes     = v.disk_size_bytes
+      description         = v.description
     }
   }
 }
@@ -64,6 +65,21 @@ output "volume_group_disks" {
 output "volume_group_disk_ids" {
   description = "Map of volume group disk keys to their external IDs."
   value       = { for k, v in nutanix_volume_group_disk_v2.disk : k => v.ext_id }
+}
+
+##################################################
+# Volume Group VM Attachment Outputs
+##################################################
+
+output "volume_group_vm_attachments" {
+  description = "Map of volume group VM attachments with their details."
+  value = {
+    for k, v in nutanix_volume_group_vm_v2.vm_attachment : k => {
+      volume_group_ext_id = v.volume_group_ext_id
+      vm_ext_id           = v.vm_ext_id
+      index               = v.index
+    }
+  }
 }
 
 ##################################################
