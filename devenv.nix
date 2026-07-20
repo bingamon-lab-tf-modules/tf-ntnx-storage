@@ -71,15 +71,10 @@ in
   env = {
     PROJECT = config.name;
   };
-
   cachix = {
     enable = true;
     pull = [
       "bingamon-lab-tf-modules"
-      "pre-commit-hooks"
-      "devenv.cachix.org"
-      "cache.nixos.org"
-      "nix-community.cachix.org"
     ];
     push = "bingamon-lab-tf-modules";
   };
@@ -138,7 +133,9 @@ in
   };
 
   git-hooks = {
-    excludes = [ ];
+    excludes = [
+      "\\.devcontainer/devcontainer\\.json$"
+    ];
     hooks = {
       actionlint.enable = true;
       action-validator.enable = true;
@@ -149,6 +146,13 @@ in
       check-yaml.enable = true;
       commitizen.enable = true;
       convco.enable = true;
+      cspell = {
+        enable = true;
+        args = [
+          "lint"
+          "--no-must-find-files"
+        ];
+      };
       deadnix.enable = true;
       dialyzer.enable = true;
       editorconfig-checker.enable = true;
@@ -212,7 +216,6 @@ in
       tflint.enable = true;
       trim-trailing-whitespace.enable = true;
       trufflehog.enable = true;
-      typos.enable = true;
       yamllint = {
         enable = true;
         settings = {
@@ -260,7 +263,6 @@ in
             "skellock.just"
             "streetsidesoftware.code-spell-checker"
             "tamasfe.even-better-toml"
-            "tekumura.typos-vscode"
             "timonwong.shellcheck"
             "tuxtina.json2yaml"
             "vscodevim.vim"
