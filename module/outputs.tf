@@ -2,11 +2,22 @@
 # Storage Container Outputs
 ##################################################
 
+# The provider populates the storage container's identifier as `container_ext_id`, NOT
+# `ext_id`, on the RESOURCE. Both attributes exist in the schema, but the clustermgmt v4
+# StorageContainer model carries `extId` and `containerExtId` as separate omitempty fields
+# and the API leaves `extId` null — so `v.ext_id` lands in state as an empty STRING.
+#
+# The two data sources hide this by aliasing containerExtId onto both attributes; the
+# resource does not. `try()` is no help because "" is not an error — use coalesce(), which
+# skips null AND empty string. `.id` is the last resort and always holds the real UUID.
+#
+# Symptom this fixes: storage_container_ids came back as { "<key>" = "" }, and those empty
+# strings were being handed to tf-ntnx-vm as a VM disk's storage_container.ext_id.
 output "storage_containers" {
   description = "Map of created storage containers with their details."
   value = {
     for k, v in nutanix_storage_containers_v2.container : k => {
-      ext_id                         = v.ext_id
+      ext_id                         = coalesce(v.container_ext_id, v.ext_id, v.id)
       name                           = v.name
       cluster_ext_id                 = v.cluster_ext_id
       replication_factor             = v.replication_factor
@@ -19,7 +30,8 @@ output "storage_containers" {
 
 output "storage_container_ids" {
   description = "Map of storage container keys to their external IDs."
-  value       = { for k, v in nutanix_storage_containers_v2.container : k => v.ext_id }
+  # See the note on `storage_containers` — the resource populates `container_ext_id`.
+  value = { for k, v in nutanix_storage_containers_v2.container : k => coalesce(v.container_ext_id, v.ext_id, v.id) }
 }
 
 ##################################################
@@ -107,11 +119,15 @@ output "storage_policy_ids" {
 # Volume Group iSCSI Client Outputs
 ##################################################
 
+# DEFENSIVE, not observed. `nutanix_volume_group_iscsi_client_v2` is suspected of the same
+# defect as the storage container above — its Read path appears not to populate `ext_id`.
+# No iSCSI clients are deployed anywhere in the estate yet, so this has never been seen in
+# practice. coalesce() costs nothing and removes the trap before the first one is created.
 output "volume_group_iscsi_clients" {
   description = "Map of volume group iSCSI clients with their details (no secrets)."
   value = {
     for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => {
-      ext_id                  = v.ext_id
+      ext_id                  = coalesce(v.ext_id, v.id)
       vg_ext_id               = v.vg_ext_id
       iscsi_initiator_name    = v.iscsi_initiator_name
       enabled_authentications = v.enabled_authentications
@@ -122,7 +138,8 @@ output "volume_group_iscsi_clients" {
 
 output "volume_group_iscsi_client_ids" {
   description = "Map of volume group iSCSI client keys to their external IDs."
-  value       = { for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => v.ext_id }
+  # Defensive — see the note on `volume_group_iscsi_clients`.
+  value = { for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => coalesce(v.ext_id, v.id) }
 }
 
 ##################################################
@@ -157,7 +174,7 @@ output "outputs" {
   value = {
     storage_containers = {
       for k, v in nutanix_storage_containers_v2.container : k => {
-        ext_id                         = v.ext_id
+        ext_id                         = coalesce(v.container_ext_id, v.ext_id, v.id)
         name                           = v.name
         cluster_ext_id                 = v.cluster_ext_id
         replication_factor             = v.replication_factor
@@ -166,7 +183,7 @@ output "outputs" {
         is_software_encryption_enabled = v.is_software_encryption_enabled
       }
     }
-    storage_container_ids = { for k, v in nutanix_storage_containers_v2.container : k => v.ext_id }
+    storage_container_ids = { for k, v in nutanix_storage_containers_v2.container : k => coalesce(v.container_ext_id, v.ext_id, v.id) }
     volume_groups = {
       for k, v in nutanix_volume_group_v2.volume_group : k => {
         ext_id            = v.ext_id
@@ -206,14 +223,14 @@ output "outputs" {
     storage_policy_ids = { for k, v in nutanix_storage_policy_v2.storage_policy : k => v.ext_id }
     volume_group_iscsi_clients = {
       for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => {
-        ext_id                  = v.ext_id
+        ext_id                  = coalesce(v.ext_id, v.id)
         vg_ext_id               = v.vg_ext_id
         iscsi_initiator_name    = v.iscsi_initiator_name
         enabled_authentications = v.enabled_authentications
         num_virtual_targets     = v.num_virtual_targets
       }
     }
-    volume_group_iscsi_client_ids = { for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => v.ext_id }
+    volume_group_iscsi_client_ids = { for k, v in nutanix_volume_group_iscsi_client_v2.iscsi_client : k => coalesce(v.ext_id, v.id) }
     volume_group_category_associations = {
       for k, v in nutanix_associate_category_to_volume_group_v2.category_association : k => {
         vg_ext_id  = v.ext_id
