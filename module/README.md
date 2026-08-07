@@ -10,14 +10,14 @@ A description of the module goes here.
 ## Requirements
 
 | Name | Version |
-| ---- | ------- |
+|------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.10.0 |
 | <a name="requirement_nutanix"></a> [nutanix](#requirement\_nutanix) | >= 2.4.2 |
 
 ## Providers
 
 | Name | Version |
-| ---- | ------- |
+|------|---------|
 | <a name="provider_nutanix"></a> [nutanix](#provider\_nutanix) | 2.4.2 |
 
 ## Modules
@@ -27,7 +27,7 @@ No modules.
 ## Resources
 
 | Name | Type |
-| ---- | ---- |
+|------|------|
 | [nutanix_associate_category_to_volume_group_v2.category_association](https://registry.terraform.io/providers/nutanix/nutanix/latest/docs/resources/associate_category_to_volume_group_v2) | resource |
 | [nutanix_storage_containers_v2.container](https://registry.terraform.io/providers/nutanix/nutanix/latest/docs/resources/storage_containers_v2) | resource |
 | [nutanix_storage_policy_v2.storage_policy](https://registry.terraform.io/providers/nutanix/nutanix/latest/docs/resources/storage_policy_v2) | resource |
@@ -45,7 +45,7 @@ No modules.
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-| ---- | ----------- | ---- | ------- | :------: |
+|------|-------------|------|---------|:--------:|
 | <a name="input_enable_data_lookups"></a> [enable\_data\_lookups](#input\_enable\_data\_lookups) | When true, enable the gated read-only data source lookups (e.g. existing storage policies). Off by default so plans do not require live Prism Central connectivity. | `bool` | `false` | no |
 | <a name="input_storage_containers"></a> [storage\_containers](#input\_storage\_containers) | A map of storage containers to manage in Nutanix. | <pre>map(object({<br/>    name                                     = string<br/>    cluster_ext_id                           = string<br/>    logical_advertised_capacity_bytes        = optional(number, null)<br/>    logical_explicit_reserved_capacity_bytes = optional(number, null)<br/>    replication_factor                       = optional(number, null)<br/>    erasure_code                             = optional(string, "OFF")<br/>    is_inline_ec_enabled                     = optional(bool, false)<br/>    has_higher_ec_fault_domain_preference    = optional(bool, false)<br/>    erasure_code_delay_secs                  = optional(number, null)<br/>    cache_deduplication                      = optional(string, "OFF")<br/>    on_disk_dedup                            = optional(string, "OFF")<br/>    is_compression_enabled                   = optional(bool, true)<br/>    compression_delay_secs                   = optional(number, null)<br/>    is_internal                              = optional(bool, false)<br/>    is_software_encryption_enabled           = optional(bool, false)<br/>    affinity_host_ext_id                     = optional(string, null)<br/>    owner_ext_id                             = optional(string, null)<br/><br/>    nfs_whitelist_addresses = optional(list(object({<br/>      ipv4 = optional(object({<br/>        value         = string<br/>        prefix_length = optional(number, 32)<br/>      }), null)<br/>    })), [])<br/>  }))</pre> | `{}` | no |
 | <a name="input_storage_policies"></a> [storage\_policies](#input\_storage\_policies) | A map of storage policies (nutanix\_storage\_policy\_v2) to manage in Nutanix. Each policy applies compression, encryption, fault-tolerance and/or IOPS-throttling effects to the entities selected by its referenced categories. | <pre>map(object({<br/>    name             = string<br/>    category_ext_ids = optional(set(string), [])<br/><br/>    compression_spec = optional(object({<br/>      compression_state = string # DISABLED, POSTPROCESS, INLINE, SYSTEM_DERIVED<br/>    }), null)<br/><br/>    encryption_spec = optional(object({<br/>      encryption_state = string # SYSTEM_DERIVED, ENABLED<br/>    }), null)<br/><br/>    qos_spec = optional(object({<br/>      throttled_iops = number # 100 - 2147483647<br/>    }), null)<br/><br/>    fault_tolerance_spec = optional(object({<br/>      replication_factor = string # SYSTEM_DERIVED, TWO, THREE<br/>    }), null)<br/>  }))</pre> | `{}` | no |
@@ -58,7 +58,7 @@ No modules.
 ## Outputs
 
 | Name | Description |
-| ---- | ----------- |
+|------|-------------|
 | <a name="output_outputs"></a> [outputs](#output\_outputs) | Aggregate of all module outputs (spec §7.6 contract, consumed by the landing zone as module.<x>.outputs). |
 | <a name="output_storage_container_ids"></a> [storage\_container\_ids](#output\_storage\_container\_ids) | Map of storage container keys to their external IDs. |
 | <a name="output_storage_containers"></a> [storage\_containers](#output\_storage\_containers) | Map of created storage containers with their details. |
