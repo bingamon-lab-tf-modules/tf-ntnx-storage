@@ -71,3 +71,6 @@ prek
 nixos
 clustermgmt
 omitempty
+SecretSpec
+mktemp
+bingamon
