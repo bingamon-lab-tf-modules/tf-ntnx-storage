@@ -74,3 +74,5 @@ omitempty
 SecretSpec
 mktemp
 bingamon
+esac
+secops
