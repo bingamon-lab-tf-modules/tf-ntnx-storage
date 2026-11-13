@@ -355,3 +355,172 @@ run "invalid_entity_type" {
 
   expect_failures = [var.volume_group_disks]
 }
+
+# Test 11: CHAP iSCSI volume group with sensitive target_secret and populated v2.5.1 data lookups.
+run "chap_iscsi_volume_group_and_populated_data_lookups" {
+  command = plan
+
+  override_data {
+    target = data.nutanix_storage_containers_v2.existing_containers
+    values = {
+      storage_containers = [
+        {
+          affinity_host_ext_id                     = ""
+          cache_deduplication                      = "OFF"
+          cluster_ext_id                           = "00000000-0000-0000-0000-000000000000"
+          cluster_name                             = "mock-cluster"
+          compression_delay_secs                   = 0
+          container_ext_id                         = "33333333-3333-3333-3333-333333333333"
+          erasure_code                             = "OFF"
+          erasure_code_delay_secs                  = 0
+          ext_id                                   = "33333333-3333-3333-3333-333333333333"
+          has_higher_ec_fault_domain_preference    = false
+          is_compression_enabled                   = true
+          is_encrypted                             = false
+          is_inline_ec_enabled                     = false
+          is_internal                              = false
+          is_marked_for_removal                    = false
+          is_nfs_whitelist_inherited               = false
+          is_software_encryption_enabled           = false
+          links                                    = []
+          logical_advertised_capacity_bytes        = 1099511627776
+          logical_explicit_reserved_capacity_bytes = 0
+          logical_implicit_reserved_capacity_bytes = 0
+          max_capacity_bytes                       = 2199023255552
+          name                                     = "existing-container"
+          nfs_whitelist_addresses                  = []
+          on_disk_dedup                            = "OFF"
+          owner_ext_id                             = ""
+          replication_factor                       = 2
+          storage_pool_ext_id                      = "44444444-4444-4444-4444-444444444444"
+          tenant_id                                = ""
+        }
+      ]
+    }
+  }
+
+  override_data {
+    target = data.nutanix_volume_groups_v2.existing_volume_groups
+    values = {
+      volumes = [
+        {
+          cluster_reference                  = "00000000-0000-0000-0000-000000000000"
+          created_by                         = "admin"
+          description                        = "Existing volume group"
+          enabled_authentications            = "CHAP"
+          ext_id                             = "22222222-2222-2222-2222-222222222222"
+          is_hidden                          = false
+          iscsi_features                     = [{ enabled_authentications = "CHAP" }]
+          links                              = []
+          name                               = "existing-vg"
+          project_ext_id                     = "77777777-7777-7777-7777-777777777777"
+          sharing_status                     = "SHARED"
+          should_load_balance_vm_attachments = false
+          storage_features                   = []
+          target_name                        = "iqn.2010-06.com.nutanix:existing-vg"
+          tenant_id                          = ""
+          usage_type                         = "USER"
+        }
+      ]
+    }
+  }
+
+  override_data {
+    target = data.nutanix_clusters_v2.clusters
+    values = {
+      cluster_entities = [
+        {
+          ext_id                   = "00000000-0000-0000-0000-000000000000"
+          name                     = "mock-cluster"
+          backup_eligibility_score = 0
+          categories               = []
+          cluster_profile_ext_id   = ""
+          container_name           = ""
+          expand                   = ""
+          inefficient_vm_count     = 0
+          links                    = []
+          nodes                    = []
+          tenant_id                = ""
+          upgrade_status           = ""
+          vm_count                 = 0
+          network = [
+            {
+              backplane                  = []
+              external_address           = []
+              external_data_services_ip  = []
+              external_subnet            = ""
+              fqdn                       = ""
+              http_proxy_list            = []
+              http_proxy_white_list      = []
+              internal_subnet            = ""
+              key_management_server_type = ""
+              masquerading_ip            = []
+              masquerading_port          = ""
+              name_server_ip_list        = []
+              nfs_subnet_white_list      = []
+              ntp_server_ip_list         = []
+              smtp_server                = []
+              management_server = [
+                {
+                  ip             = []
+                  is_drs_enabled = false
+                  is_in_use      = true
+                  is_registered  = true
+                  type           = "VCENTER"
+                }
+              ]
+            }
+          ]
+          config = [
+            {
+              authorized_public_key_list       = []
+              build_info                       = []
+              cluster_arch                     = ""
+              cluster_function                 = ["AOS"]
+              cluster_software_map             = []
+              encryption_in_transit_status     = ""
+              encryption_option                = []
+              encryption_scope                 = []
+              fault_tolerance_state            = []
+              hypervisor_types                 = ["AHV"]
+              incarnation_id                   = 0
+              is_available                     = true
+              is_lts                           = false
+              is_password_remote_login_enabled = false
+              is_remote_support_enabled        = false
+              operation_mode                   = ""
+              pulse_status                     = []
+              redundancy_factor                = 2
+              timezone                         = ""
+            }
+          ]
+        }
+      ]
+    }
+  }
+
+  variables {
+    volume_groups = {
+      chap_vg = {
+        name              = "chap-vg"
+        cluster_reference = "00000000-0000-0000-0000-000000000000"
+        sharing_status    = "SHARED"
+        usage_type        = "USER"
+        iscsi_features = {
+          enabled_authentications = "CHAP"
+          target_secret           = "chap-target-secret-1234"
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = output.storage_summary.shared_volume_groups == 1
+    error_message = "Expected 1 shared CHAP volume group"
+  }
+
+  assert {
+    condition     = output.volume_groups["chap_vg"].name == "chap-vg"
+    error_message = "Expected chap_vg output details without exposing target_secret"
+  }
+}
