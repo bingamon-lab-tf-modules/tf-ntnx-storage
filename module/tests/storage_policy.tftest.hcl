@@ -184,6 +184,26 @@ run "policies_produce_id_maps" {
 run "enable_data_lookups" {
   command = plan
 
+  override_data {
+    target = data.nutanix_storage_policies_v2.existing_policies[0]
+    values = {
+      storage_policies = [
+        {
+          category_ext_ids     = ["4d552748-e119-540a-b06c-3c6f0d213fa2"]
+          compression_spec     = [{ compression_state = "INLINE" }]
+          encryption_spec      = [{ encryption_state = "ENABLED" }]
+          ext_id               = "88888888-8888-8888-8888-888888888888"
+          fault_tolerance_spec = [{ replication_factor = "TWO" }]
+          links                = []
+          name                 = "existing-policy"
+          policy_type          = "USER"
+          qos_spec             = [{ throttled_iops = 2000 }]
+          tenant_id            = ""
+        }
+      ]
+    }
+  }
+
   variables {
     enable_data_lookups = true
 

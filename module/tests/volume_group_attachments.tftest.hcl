@@ -350,3 +350,70 @@ run "category_association_empty_list" {
 
   expect_failures = [var.volume_group_category_associations]
 }
+
+# Test 10: Category name resolution and iSCSI client lookup with v2.5.1 schemas.
+run "category_name_resolution_via_data_lookups" {
+  command = plan
+
+  override_data {
+    target = data.nutanix_categories_v2.existing_categories[0]
+    values = {
+      categories = [
+        {
+          associations             = []
+          description              = "Gold storage tier"
+          detailed_associations    = []
+          ext_id                   = "66666666-6666-6666-6666-666666666666"
+          key                      = "AppTier"
+          links                    = []
+          owner_uuid               = ""
+          project_ext_id           = "77777777-7777-7777-7777-777777777777"
+          shared_with_all_projects = true
+          shared_with_projects     = []
+          tenant_id                = ""
+          type                     = "USER"
+          value                    = "Gold"
+        }
+      ]
+    }
+  }
+
+  override_data {
+    target = data.nutanix_volume_iscsi_clients_v2.existing_iscsi_clients[0]
+    values = {
+      iscsi_clients = [
+        {
+          attached_targets           = []
+          attachment_site            = "PRIMARY"
+          cluster_reference          = "00000000-0000-0000-0000-000000000000"
+          enabled_authentications    = "CHAP"
+          ext_id                     = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+          iscsi_initiator_name       = "iqn.1991-05.com.microsoft:existing"
+          iscsi_initiator_network_id = []
+          links                      = []
+          tenant_id                  = ""
+        }
+      ]
+    }
+  }
+
+  variables {
+    enable_data_lookups = true
+
+    volume_group_category_associations = {
+      tier_by_name = {
+        volume_group = "99999999-9999-9999-9999-999999999999"
+        categories = [
+          {
+            name = "AppTier/Gold"
+          }
+        ]
+      }
+    }
+  }
+
+  assert {
+    condition     = output.volume_group_category_associations["tier_by_name"].categories[0].ext_id == "66666666-6666-6666-6666-666666666666"
+    error_message = "Expected category name AppTier/Gold to resolve to ext_id via categories_v2 lookup"
+  }
+}
